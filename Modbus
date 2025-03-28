@@ -1,1 +1,56 @@
-https://privatebin.net/?4d400a9ed1c90e63#DLnqCj6NAoWoNA9VDLSGoajHs4abWZaBYM9FGyz8EvoJ
+from pymodbus.client import ModbusSerialClient
+import time
+
+# Configuration
+SERIAL_PORT = "/dev/ttyUSB0"  # Change based on your setup
+BAUD_RATE = 9600
+SLAVE_ID = 1
+TEMP_REGISTER = 0x0000
+HUMIDITY_REGISTER = 0x0001
+
+# Initialize Modbus Client
+client = ModbusSerialClient(
+    method="rtu",
+    port=SERIAL_PORT,
+    baudrate=BAUD_RATE,
+    parity='N',
+    stopbits=1,
+    bytesize=8,
+    timeout=1
+)
+
+if not client.connect():
+    print("Failed to connect to DTH-948 controller. Check connection.")
+    exit()
+
+def read_temperature_humidity():
+    try:
+        # Read temperature
+        temp_response = client.read_holding_registers(TEMP_REGISTER, count=1, slave=SLAVE_ID)
+        if temp_response.isError():
+            print("Error reading temperature!")
+        else:
+            temperature = temp_response.registers[0] / 10.0
+            print(f"Temperature: {temperature}°C")
+
+        # Read humidity
+        humidity_response = client.read_holding_registers(HUMIDITY_REGISTER, count=1, slave=SLAVE_ID)
+        if humidity_response.isError():
+            print("Error reading humidity!")
+        else:
+            humidity = humidity_response.registers[0] / 10.0
+            print(f"Humidity: {humidity}%")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+# Read data every 5 seconds
+try:
+    while True:
+        read_temperature_humidity()
+        time.sleep(5)
+except KeyboardInterrupt:
+    print("Stopping program...")
+
+# Close the connection
+client.close()
